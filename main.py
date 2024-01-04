@@ -1,77 +1,43 @@
-from playwright.sync_api import sync_playwright
-import time
+from requests import get
 from bs4 import BeautifulSoup
-import csv
-#comma seperated values
-#mac os , exel 등 다양한 프로그램에 범용적이다.
+from extractors.wwr import extract_wwr_jobs
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
-p = sync_playwright().start()
+options = Options()
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
 
-browser = p.chromium.launch(headless=False)
-#chromium 대신 firefox, safari등 가능
+browser = webdriver.Chrome(options=options)
 
-page = browser.new_page()
-#새탭 열기
+base_url = "https://kr.indeed.com/jobs?q="
+search_term = "python"
 
-page.goto("https://www.wanted.co.kr/search?query=flutter")
+browser.get(f"{base_url}{search_term}")
 
-time.sleep(3)
+response = browser.page_source
 
-page.click("button.Aside_searchButton__Xhqq3")
+job_DB = []
 
-time.sleep(5)
+soup = BeautifulSoup(response,"html.parser")
+job_list = soup.find("ul",class_="css-zu9cdh eu4oa1w0")
+jobs = job_list.find_all("li",class_="css-5lfssm eu4oa1w0",recursive="False")
 
-page.get_by_placeholder("검색어를 입력해 주세요.").fill("flutter")
-
-time.sleep(5)
-
-page.keyboard.down("Enter")
-
-time.sleep(5)
-
-page.click("a#search_tab_position")
-
-time.sleep(2)
-
-for x in range(5) :
-    page.keyboard.down("End")
-    time.sleep(2)
-
-content = page.content()
-
-time.sleep(3)
-p.stop()
-
-soup = BeautifulSoup(content, "html.parser")
-
-jobs_db = []
-
-jobs = soup.find_all("div",class_="JobCard_container__FqChn JobCard_container--variant-card__znjV9")
-
-for job in jobs :
-    link = f"https://www.wanted.co.kr/{job.find('a')['href']}"
-    title = job.find("strong",class_="JobCard_title__ddkwM").text
-    company_name = job.find("span",class_="JobCard_companyName__vZMqJ").text
-    location = job.find("span",class_="JobCard_location__2EOr5").text
-    reward = job.find("span",class_="JobCard_reward__sdyHn").text
-    job = {
-        "link":link ,
-        "title":title ,
-        "company_name":company_name ,
-        "location":location ,
-        "reward": reward
-    }
-    jobs_db.append(job)
-     
-print(len(jobs_db))
-
-file = open("jobs.csv","w")
-writer = csv.writer(file)
-#row는 행이다
-#행은 리스트를 받는다. 딕셔너리는 안된다. 이떄 쓰는 함수가 딕셔너리.values() // 딕셔너리.kets()
-writer.writerow(["Title","Comapany","Location","Reward","Link"])
-
-for job in jobs_db :
-    writer.writerow(job.values())
-
-file.close()
+for job in jobs:
+    zone = job.find("div",class_="mosaic-zone")
+    if zone == None :
+        anchor = job.select_one("h2 a")
+        title = anchor['aria-label']
+        link = anchor['href']
+        company = job.select_one(".company_location div span").string
+        location = job.select_one(".company_location div div").string
+        job_data = {
+            'link' : f"https://kr.indeed.com{link}",
+            'company' : company,
+            'location' : location,
+            'position' : title,
+        }
+        job_DB.append(job_data)
+        
+for result in job_DB:
+    print(result, "\n////////\n")
