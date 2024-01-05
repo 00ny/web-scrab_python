@@ -14,23 +14,14 @@ page = browser.new_page()
 #새탭 열기
 
 page.goto("https://www.wanted.co.kr/search?query=flutter")
-
 time.sleep(3)
-
 page.click("button.Aside_searchButton__Xhqq3")
-
 time.sleep(5)
-
 page.get_by_placeholder("검색어를 입력해 주세요.").fill("flutter")
-
 time.sleep(5)
-
 page.keyboard.down("Enter")
-
 time.sleep(5)
-
 page.click("a#search_tab_position")
-
 time.sleep(2)
 
 for x in range(5) :
@@ -38,9 +29,10 @@ for x in range(5) :
     time.sleep(2)
 
 content = page.content()
-
 time.sleep(3)
 p.stop()
+
+#정보 다 불러왔음
 
 soup = BeautifulSoup(content, "html.parser")
 
